@@ -1,0 +1,14 @@
+services:
+  claude-proxy:
+    image: node:22-alpine
+    working_dir: /app
+    command: sh -c "npm install --omit=dev 2>/dev/null || true && node src/main.js"
+    ports:
+      - "42069:42069"
+    volumes:
+      - ~/.claude:/root/.claude
+      - ~/.claude-code-proxy:/root/.claude-code-proxy
+      - .:/app
+    environment:
+      - NODE_ENV=production
+      - CONFIG_DIR=/app/config/docker

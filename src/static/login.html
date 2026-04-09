@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Authenticate - Claude Code Proxy</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Roboto, sans-serif;
+      background: #0f1117;
+      color: #e1e4e8;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .card {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 12px;
+      padding: 40px;
+      max-width: 480px;
+      width: 100%;
+    }
+
+    .title {
+      font-size: 22px;
+      font-weight: 600;
+      color: #f0f3f6;
+      margin-bottom: 8px;
+    }
+
+    .subtitle {
+      font-size: 14px;
+      color: #8b949e;
+      margin-bottom: 32px;
+    }
+
+    .step {
+      display: flex;
+      gap: 14px;
+      margin-bottom: 24px;
+    }
+
+    .step-number {
+      flex-shrink: 0;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: #1f6feb;
+      color: #fff;
+      font-size: 13px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .step-content {
+      flex: 1;
+      padding-top: 3px;
+    }
+
+    .step-content p {
+      font-size: 14px;
+      color: #c9d1d9;
+      line-height: 1.5;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      background: #238636;
+      color: #fff;
+      border: 1px solid rgba(240,246,252,0.1);
+      border-radius: 6px;
+      padding: 10px 20px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.15s;
+      width: 100%;
+      margin-top: 4px;
+    }
+
+    .btn:hover { background: #2ea043; }
+    .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    .btn-submit {
+      background: #1f6feb;
+      margin-top: 12px;
+    }
+
+    .btn-submit:hover { background: #388bfd; }
+
+    .divider {
+      border: none;
+      border-top: 1px solid #30363d;
+      margin: 28px 0;
+    }
+
+    .input-group { margin-top: 8px; }
+
+    .input-group label {
+      display: block;
+      font-size: 13px;
+      color: #8b949e;
+      margin-bottom: 6px;
+    }
+
+    .input-group input {
+      width: 100%;
+      padding: 10px 12px;
+      background: #0d1117;
+      border: 1px solid #30363d;
+      border-radius: 6px;
+      color: #c9d1d9;
+      font-size: 14px;
+      font-family: 'SF Mono', 'Fira Code', 'Fira Mono', monospace;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    .input-group input:focus { border-color: #1f6feb; }
+    .input-group input::placeholder { color: #484f58; }
+
+    .hint {
+      font-size: 12px;
+      color: #6e7681;
+      margin-top: 6px;
+    }
+
+    .error {
+      background: #3d1214;
+      border: 1px solid #f8514966;
+      border-radius: 6px;
+      padding: 10px 14px;
+      font-size: 13px;
+      color: #f85149;
+      margin-top: 16px;
+      display: none;
+    }
+
+    .spinner {
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1 class="title">Authenticate with Claude</h1>
+    <p class="subtitle">Connect your Claude subscription to the proxy</p>
+
+    <div class="step">
+      <div class="step-number">1</div>
+      <div class="step-content">
+        <p>Open the Claude authorization page and approve access.</p>
+        <button class="btn" id="authBtn">Open Authorization Page</button>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-number">2</div>
+      <div class="step-content">
+        <p>Copy the authorization code shown on the page.</p>
+        <p class="hint">The code includes a <code>#</code> symbol — copy the entire string.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-number">3</div>
+      <div class="step-content">
+        <p>Paste the code below and submit.</p>
+        <form action="/auth/callback" method="GET" id="codeForm">
+          <div class="input-group">
+            <label for="codeInput">Authorization Code</label>
+            <input type="text" id="codeInput" name="manual_code" placeholder="paste code#state here" required autocomplete="off">
+          </div>
+          <button type="submit" class="btn btn-submit">Submit Code</button>
+        </form>
+      </div>
+    </div>
+
+    <div class="error" id="errorBox"></div>
+  </div>
+
+  <script>
+    const authBtn = document.getElementById('authBtn');
+    const errorBox = document.getElementById('errorBox');
+
+    authBtn.addEventListener('click', async () => {
+      authBtn.disabled = true;
+      authBtn.innerHTML = '<div class="spinner"></div> Loading...';
+      errorBox.style.display = 'none';
+
+      try {
+        const res = await fetch('/auth/get-url');
+        const data = await res.json();
+        if (data.url) {
+          window.open(data.url, '_blank');
+          authBtn.textContent = 'Page Opened — Complete Step 2';
+        } else {
+          throw new Error(data.error || 'Failed to get authorization URL');
+        }
+      } catch (err) {
+        errorBox.textContent = err.message;
+        errorBox.style.display = 'block';
+        authBtn.textContent = 'Open Authorization Page';
+      } finally {
+        authBtn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>

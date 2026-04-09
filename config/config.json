@@ -1,0 +1,14 @@
+{
+  "version": 2,
+  "port": 42069,
+  "host": "",
+  "log_level": "INFO",
+  "log_file": false,
+  "log_file_level": "DEBUG",
+  "filter_sampling_params": false,
+  "auto_open_browser": true,
+  "fallback_to_claude_code": true,
+  "strip_ttl": true,
+  "max_body_bytes": 10000000,
+  "beta_header": "claude-code-20250219,oauth-2025-04-20,interleaved-thinking-2025-05-14,fine-grained-tool-streaming-2025-05-14"
+}

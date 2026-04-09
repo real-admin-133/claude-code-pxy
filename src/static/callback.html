@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Authenticated - Claude Code Proxy</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Roboto, sans-serif;
+      background: #0f1117;
+      color: #e1e4e8;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .card {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 12px;
+      padding: 48px 40px;
+      max-width: 440px;
+      width: 100%;
+      text-align: center;
+    }
+
+    .check {
+      width: 64px;
+      height: 64px;
+      margin: 0 auto 24px;
+    }
+
+    .check circle {
+      fill: none;
+      stroke: #238636;
+      stroke-width: 2;
+      stroke-dasharray: 170;
+      stroke-dashoffset: 170;
+      animation: circle 0.6s ease-out forwards;
+    }
+
+    .check polyline {
+      fill: none;
+      stroke: #3fb950;
+      stroke-width: 3;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      stroke-dasharray: 40;
+      stroke-dashoffset: 40;
+      animation: check 0.4s ease-out 0.4s forwards;
+    }
+
+    @keyframes circle {
+      to { stroke-dashoffset: 0; }
+    }
+
+    @keyframes check {
+      to { stroke-dashoffset: 0; }
+    }
+
+    .title {
+      font-size: 22px;
+      font-weight: 600;
+      color: #f0f3f6;
+      margin-bottom: 8px;
+    }
+
+    .subtitle {
+      font-size: 14px;
+      color: #8b949e;
+      margin-bottom: 28px;
+    }
+
+    .info {
+      background: #0d1117;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      padding: 16px;
+      text-align: left;
+      margin-bottom: 24px;
+    }
+
+    .info-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 6px 0;
+      font-size: 13px;
+      color: #c9d1d9;
+    }
+
+    .info-item svg {
+      flex-shrink: 0;
+      width: 16px;
+      height: 16px;
+      color: #3fb950;
+    }
+
+    .close-hint {
+      font-size: 13px;
+      color: #6e7681;
+    }
+
+    code {
+      background: #0d1117;
+      border: 1px solid #30363d;
+      border-radius: 4px;
+      padding: 1px 6px;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 12px;
+      color: #8b949e;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <svg class="check" viewBox="0 0 64 64">
+      <circle cx="32" cy="32" r="30" />
+      <polyline points="20,34 28,42 44,24" />
+    </svg>
+
+    <h1 class="title">Authenticated</h1>
+    <p class="subtitle">Your proxy is now connected to Claude.</p>
+
+    <div class="info">
+      <div class="info-item">
+        <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 16A8 8 0 108 0a8 8 0 000 16zm3.78-9.72a.75.75 0 00-1.06-1.06L6.75 9.19 5.28 7.72a.75.75 0 00-1.06 1.06l2 2a.75.75 0 001.06 0l4.5-4.5z"/></svg>
+        Access token saved
+      </div>
+      <div class="info-item">
+        <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 16A8 8 0 108 0a8 8 0 000 16zm3.78-9.72a.75.75 0 00-1.06-1.06L6.75 9.19 5.28 7.72a.75.75 0 00-1.06 1.06l2 2a.75.75 0 001.06 0l4.5-4.5z"/></svg>
+        Token auto-refreshes when needed
+      </div>
+      <div class="info-item">
+        <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 16A8 8 0 108 0a8 8 0 000 16zm3.78-9.72a.75.75 0 00-1.06-1.06L6.75 9.19 5.28 7.72a.75.75 0 00-1.06 1.06l2 2a.75.75 0 001.06 0l4.5-4.5z"/></svg>
+        Proxy ready to accept requests
+      </div>
+    </div>
+
+    <p class="close-hint">You can close this tab.</p>
+    <p style="margin-top: 16px;"><code>~/.claude-code-proxy/tokens.json</code></p>
+  </div>
+</body>
+</html>

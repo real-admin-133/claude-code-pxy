@@ -22,6 +22,28 @@ function openBrowser(url) {
   });
 }
 
+const SOURCE_LABELS = {
+  api_key: 'API key override',
+  oauth: 'OAuth tokens',
+  claude_code: 'Claude Code credentials',
+};
+
+function describeAuthStatus(status) {
+  const source = SOURCE_LABELS[status.source] || 'unknown source';
+  const expiry = status.expires_at ? status.expires_at.toLocaleString() : 'no expiry recorded';
+
+  switch (status.state) {
+    case 'valid':
+      return `Ready (${source}) - valid until ${expiry}`;
+    case 'refreshable':
+      return `Ready (${source}) - access token stale, will refresh on first request`;
+    case 'expired':
+      return `Expired (${source}) - no refresh token, re-authentication required`;
+    default:
+      return 'Not authenticated - no credentials found';
+  }
+}
+
 export async function start(configDir) {
   const config = loadConfig(configDir);
   const logger = createLogger(config);
@@ -34,22 +56,18 @@ export async function start(configDir) {
   await httpServer.listen();
 
   // Display auth status
-  const isAuthenticated = tokenManager.isAuthenticated();
-  const expiration = tokenManager.getTokenExpiration();
+  const status = tokenManager.getAuthStatus();
+  const authUrl = `${config.publicBaseUrl}/auth/login`;
 
   logger.info('');
   logger.info('Authentication Status:');
-  if (isAuthenticated && expiration) {
-    logger.info(`  Authenticated until ${expiration.toLocaleString()}`);
-  } else {
-    logger.info('  Not authenticated');
-    const authUrl = `http://localhost:${config.port}/auth/login`;
-    logger.info(`  Visit ${authUrl} to authenticate`);
+  logger.info(`  ${describeAuthStatus(status)}`);
+  logger.info(`  Log in / re-authenticate: ${authUrl}`);
+  logger.info(`  Check status:             ${config.publicBaseUrl}/auth/status`);
 
-    if (config.auto_open_browser && config.resolvedHost !== '0.0.0.0') {
-      logger.info('  Opening browser...');
-      setTimeout(() => openBrowser(authUrl), 1000);
-    }
+  if (!status.usable && config.auto_open_browser && config.resolvedHost !== '0.0.0.0') {
+    logger.info('  Opening browser...');
+    setTimeout(() => openBrowser(authUrl), 1000);
   }
   logger.info('');
 

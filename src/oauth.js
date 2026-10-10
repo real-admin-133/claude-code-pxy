@@ -207,12 +207,14 @@ export function createOAuthManager(config, logger, tokenManager) {
       }
 
       if (pathname === '/auth/status' && method === 'GET') {
-        const isAuth = tokenManager.isAuthenticated();
-        const exp = tokenManager.getTokenExpiration();
+        const status = tokenManager.getAuthStatus();
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({
-          authenticated: isAuth,
-          expires_at: exp ? exp.toISOString() : null,
+          authenticated: status.usable,
+          state: status.state,
+          source: status.source,
+          expires_at: status.expires_at ? status.expires_at.toISOString() : null,
+          login_url: `${config.publicBaseUrl}/auth/login`,
         }));
         return true;
       }

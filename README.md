@@ -57,6 +57,45 @@ On first run, your browser opens to `http://localhost:42069/auth/login`. Authori
 - Re-authenticate: `http://localhost:42069/auth/login`
 - Logout: `http://localhost:42069/auth/logout`
 
+### Checking whether your credentials still work
+
+The proxy prints its credential state and the login URL on every startup, whether
+or not you are authenticated:
+
+```
+Authentication Status:
+  Ready (OAuth tokens) - valid until 10/7/2026, 6:26:17 AM
+  Log in / re-authenticate: http://localhost:42069/auth/login
+  Check status:             http://localhost:42069/auth/status
+```
+
+`GET /auth/status` reports the same thing as JSON:
+
+```json
+{
+  "authenticated": true,
+  "state": "refreshable",
+  "source": "oauth",
+  "expires_at": "2026-10-06T23:26:17.399Z",
+  "login_url": "http://localhost:42069/auth/login"
+}
+```
+
+| `state` | Meaning |
+| --- | --- |
+| `valid` | Access token is fresh and good to use. |
+| `refreshable` | Access token is stale or expiring, but a refresh token is held — it renews on the next request. |
+| `expired` | Access token is past its expiry and there is no refresh token. Log in again. |
+| `none` | No credentials found at all. |
+
+`source` is `oauth` (the proxy's own tokens), `claude_code` (the fallback
+credentials below), or `api_key` (an `x-api-key` override from the client).
+`authenticated` is true for both `valid` and `refreshable`.
+
+This check is local — it reads expiry timestamps rather than calling the
+Anthropic API, so it costs nothing and cannot tell you if a token was revoked
+server-side. A revoked token surfaces as a 401 on the first real request.
+
 ### Claude Code Fallback
 
 If you have Claude Code installed, the proxy can use its credentials as a fallback. This is enabled by default (`fallback_to_claude_code: true` in config). No setup needed — it reads from `~/.claude/.credentials.json` automatically.

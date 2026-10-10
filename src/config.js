@@ -123,5 +123,11 @@ export function loadConfig(configDir) {
   // Resolve host: empty = auto-detect
   config.resolvedHost = config.host || (isRunningInDocker() ? '0.0.0.0' : '127.0.0.1');
 
+  // Base URL a user can actually click: a wildcard bind is not a reachable host
+  const urlHost = config.resolvedHost === '0.0.0.0' || config.resolvedHost === '::'
+    ? 'localhost'
+    : config.resolvedHost;
+  config.publicBaseUrl = `http://${urlHost}:${config.port}`;
+
   return Object.freeze(config);
 }

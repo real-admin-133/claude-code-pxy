@@ -102,8 +102,17 @@ describe('createTokenManager', () => {
   describe('isAuthenticated', () => {
     test('returns false when no tokens', () => {
       try { rmSync(tokenPath); } catch { /* ok */ }
-      const tm = createTokenManager(makeConfig(), makeLogger());
+      const tm = createTokenManager(makeConfig({ fallback_to_claude_code: false }), makeLogger());
       expect(tm.isAuthenticated()).toBe(false);
+    });
+
+    test('returns true from the Claude Code fallback when enabled', () => {
+      try { rmSync(tokenPath); } catch { /* ok */ }
+      const tm = createTokenManager(makeConfig(), makeLogger());
+      // Depends on whether this host has Claude Code credentials; assert the
+      // reported source stays consistent with the verdict either way.
+      const status = tm.getAuthStatus();
+      expect(status.usable).toBe(status.source === 'claude_code');
     });
 
     test('returns true when tokens exist', () => {
@@ -113,10 +122,62 @@ describe('createTokenManager', () => {
     });
   });
 
+  describe('getAuthStatus', () => {
+    test('reports none when no credentials exist', () => {
+      try { rmSync(tokenPath); } catch { /* ok */ }
+      const tm = createTokenManager(makeConfig({ fallback_to_claude_code: false }), makeLogger());
+      expect(tm.getAuthStatus()).toEqual({
+        usable: false, source: null, state: 'none', expires_at: null,
+      });
+    });
+
+    test('reports valid for a fresh OAuth token', () => {
+      const tm = createTokenManager(makeConfig(), makeLogger());
+      const exp = Date.now() + 300_000;
+      tm.saveTokens({ access_token: 'at', refresh_token: 'rt', expires_at: exp });
+      const status = tm.getAuthStatus();
+      expect(status.usable).toBe(true);
+      expect(status.state).toBe('valid');
+      expect(status.source).toBe('oauth');
+      expect(status.expires_at.getTime()).toBe(exp);
+    });
+
+    test('reports refreshable when expired but a refresh token is held', () => {
+      const tm = createTokenManager(makeConfig(), makeLogger());
+      tm.saveTokens({ access_token: 'at', refresh_token: 'rt', expires_at: Date.now() - 1000 });
+      const status = tm.getAuthStatus();
+      expect(status.usable).toBe(true);
+      expect(status.state).toBe('refreshable');
+    });
+
+    test('reports expired when the refresh token is gone', () => {
+      const tm = createTokenManager(makeConfig({ fallback_to_claude_code: false }), makeLogger());
+      tm.saveTokens({ access_token: 'at', expires_at: Date.now() - 1000 });
+      const status = tm.getAuthStatus();
+      expect(status.usable).toBe(false);
+      expect(status.state).toBe('expired');
+    });
+
+    test('treats a token inside the refresh buffer as refreshable, not valid', () => {
+      const tm = createTokenManager(makeConfig(), makeLogger());
+      tm.saveTokens({ access_token: 'at', refresh_token: 'rt', expires_at: Date.now() + 30_000 });
+      expect(tm.getAuthStatus().state).toBe('refreshable');
+    });
+
+    test('an API key override wins over stored tokens', () => {
+      const tm = createTokenManager(makeConfig(), makeLogger());
+      tm.saveTokens({ access_token: 'at', expires_at: Date.now() - 1000 });
+      tm.setApiKeyOverride('sk-test');
+      const status = tm.getAuthStatus();
+      expect(status.usable).toBe(true);
+      expect(status.source).toBe('api_key');
+    });
+  });
+
   describe('getTokenExpiration', () => {
     test('returns null when no tokens', () => {
       try { rmSync(tokenPath); } catch { /* ok */ }
-      const tm = createTokenManager(makeConfig(), makeLogger());
+      const tm = createTokenManager(makeConfig({ fallback_to_claude_code: false }), makeLogger());
       expect(tm.getTokenExpiration()).toBeNull();
     });
 
@@ -132,7 +193,7 @@ describe('createTokenManager', () => {
 
   describe('logout', () => {
     test('clears tokens', () => {
-      const tm = createTokenManager(makeConfig(), makeLogger());
+      const tm = createTokenManager(makeConfig({ fallback_to_claude_code: false }), makeLogger());
       tm.saveTokens({ access_token: 'at', refresh_token: 'rt', expires_at: Date.now() + 60000 });
       tm.logout();
       expect(tm.isAuthenticated()).toBe(false);

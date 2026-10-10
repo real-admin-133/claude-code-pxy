@@ -15,12 +15,13 @@ function makeTokenManager() {
     deleteTokens: jest.fn(),
     isAuthenticated: jest.fn(() => false),
     getTokenExpiration: jest.fn(() => null),
+    getAuthStatus: jest.fn(() => ({ usable: false, source: null, state: 'none', expires_at: null })),
     logout: jest.fn(),
   };
 }
 
 function makeConfig() {
-  return { auto_open_browser: false };
+  return { auto_open_browser: false, publicBaseUrl: 'http://localhost:42069' };
 }
 
 describe('createOAuthManager', () => {
@@ -126,6 +127,8 @@ describe('createOAuthManager', () => {
       const body = JSON.parse(res.end.mock.calls[0][0]);
       expect(body.authenticated).toBe(false);
       expect(body.expires_at).toBeNull();
+      expect(body.state).toBe('none');
+      expect(body.login_url).toBe('http://localhost:42069/auth/login');
     });
 
     test('/auth/logout calls tokenManager.logout', async () => {

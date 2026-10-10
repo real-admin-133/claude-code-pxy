@@ -182,6 +182,42 @@ export function createTokenManager(config, logger) {
     return refreshPromise;
   }
 
+  // --- Credential inspection ---
+
+  // A credential is usable if the access token is still fresh, or if it is
+  // stale but we hold a refresh token to exchange for a new one.
+  function describeCredential(source, refreshToken, expiresAt, bufferMs) {
+    const expires = expiresAt ? new Date(expiresAt) : null;
+
+    if (expiresAt && expiresAt > Date.now() + bufferMs) {
+      return { usable: true, source, state: 'valid', expires_at: expires };
+    }
+    if (refreshToken) {
+      return { usable: true, source, state: 'refreshable', expires_at: expires };
+    }
+    return { usable: false, source, state: 'expired', expires_at: expires };
+  }
+
+  function getAuthStatus() {
+    if (apiKeyOverride) {
+      return { usable: true, source: 'api_key', state: 'valid', expires_at: null };
+    }
+
+    const tokens = loadTokens();
+    if (tokens?.access_token) {
+      return describeCredential('oauth', tokens.refresh_token, tokens.expires_at, REFRESH_BUFFER_MS);
+    }
+
+    if (config.fallback_to_claude_code) {
+      const creds = loadClaudeCodeCredentials();
+      if (creds?.accessToken) {
+        return describeCredential('claude_code', creds.refreshToken, creds.expiresAt, 10_000);
+      }
+    }
+
+    return { usable: false, source: null, state: 'none', expires_at: null };
+  }
+
   // --- Public API ---
 
   return {
@@ -231,14 +267,14 @@ export function createTokenManager(config, logger) {
       cachedToken = null;
     },
 
+    getAuthStatus,
+
     isAuthenticated() {
-      const tokens = loadTokens();
-      return !!(tokens?.access_token && tokens?.refresh_token);
+      return getAuthStatus().usable;
     },
 
     getTokenExpiration() {
-      const tokens = loadTokens();
-      return tokens?.expires_at ? new Date(tokens.expires_at) : null;
+      return getAuthStatus().expires_at;
     },
 
     logout() {
